@@ -1,18 +1,41 @@
-node {
-    def app
-    stage('Clone repository') {
-        checkout scm
+pipeline {
+    agent any
+
+    environment {
+        registry = "nikolovanela/kiii"
+        registryCredential = 'dockerhub'
     }
-    stage('Build image') {
-        app = docker.build("nikolovanela/kiii")
-    }
-    stage('Push image') {   
-        docker.withRegistry('https://registry.hub.docker.com', 'dockerhub') {
-            app.push("${env.BRANCH_NAME}-${env.BUILD_NUMBER}")
-            app.push("${env.BRANCH_NAME}-latest")
+
+    stages {
+        stage('Clone repository') {
+            steps {
+                checkout scm
+            }
         }
-    }
-    stage('Clean up') {
-        cleanWs() 
+        
+        stage('Build image') {
+            steps {
+                script {
+                    app = docker.build("${registry}:latest")
+                }
+            }
+        }
+
+        stage('Push image') {
+            steps {
+                script {
+                    docker.withRegistry('https://registry.hub.docker.com', registryCredential) {
+                        app.push("${env.BRANCH_NAME}-${env.BUILD_NUMBER}")
+                        app.push("${env.BRANCH_NAME}-latest")
+                    }
+                }
+            }
+        }
+
+        stage('Clean up') {
+            steps {
+                cleanWs() // Чистење на работната папка
+            }
+        }
     }
 }
